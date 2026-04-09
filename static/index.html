@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyprus Trip 🌊 Aug 5–10, 2025</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          animation: {
+            'fade-in': 'fadeIn 0.25s ease',
+            'slide-up': 'slideUp 0.3s ease',
+          },
+          keyframes: {
+            fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
+            slideUp: { from: { opacity: 0, transform: 'translateY(16px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+    body { background: linear-gradient(160deg,#f0f9ff 0%,#fef9ee 60%,#f0fdf4 100%); min-height:100vh; }
+    .no-scroll::-webkit-scrollbar { display:none; }
+    .no-scroll { -ms-overflow-style:none; scrollbar-width:none; }
+    .wave { background: linear-gradient(135deg,#0EA5E9 0%,#0284C7 45%,#075985 100%); }
+    .card-lift { transition: transform .2s, box-shadow .2s; }
+    .card-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+    .slot-line::after { content:''; flex:1; height:1px; background: linear-gradient(to right,#e2e8f0,transparent); }
+    @keyframes toast-in { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+    .toast-in { animation: toast-in .3s ease; }
+    .modal-bg { backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     CONFIG — paste your Supabase credentials
+     to enable the suggestions feature
+     ══════════════════════════════════════════ -->
+<script>
+  window.SUPABASE_URL      = 'YOUR_SUPABASE_URL'
+  window.SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'
+</script>
+
+<!-- ══════════════════════════════════════════
+     APP HTML SHELL
+     ══════════════════════════════════════════ -->
+
+<!-- Header -->
+<header class="wave text-white">
+  <div class="max-w-2xl mx-auto px-4 pt-6 pb-8">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-3xl">🌊</span>
+          <span class="text-xs font-bold uppercase tracking-widest text-blue-200">Group Trip Planner</span>
+        </div>
+        <h1 class="text-3xl font-black text-white leading-tight">Cyprus 2025</h1>
+        <p class="text-blue-200 text-sm mt-1 font-medium">Aug 5–10 · Ayia Napa · Protaras · Limassol · Paphos</p>
+        <p class="text-blue-300 text-xs mt-0.5">4–5 guys · The boys trip 🍻</p>
+      </div>
+      <div class="flex flex-col items-end gap-2 flex-shrink-0 pt-1">
+        <button id="shareBtn" class="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+          <span id="shareBtnTxt">Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex gap-5 mt-5 pt-4 border-t border-white/20 text-center">
+      <div><p class="text-xl font-black">6</p><p class="text-blue-200 text-xs">Days</p></div>
+      <div class="w-px bg-white/20"></div>
+      <div id="statActivities"><p class="text-xl font-black">31</p><p class="text-blue-200 text-xs">Activities</p></div>
+      <div class="w-px bg-white/20"></div>
+      <div id="statSuggestions" class="cursor-pointer" onclick="openSuggestions()"><p class="text-xl font-black" id="statSugCount">0</p><p class="text-blue-200 text-xs">Suggestions</p></div>
+    </div>
+  </div>
+</header>
+
+<!-- Day selector -->
+<div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+  <div class="max-w-2xl mx-auto px-4">
+    <div id="dayTabs" class="flex gap-1 overflow-x-auto no-scroll py-3"></div>
+  </div>
+</div>
+
+<!-- Day hero banner -->
+<div class="max-w-2xl mx-auto px-4 mt-6">
+  <div id="dayHero" class="rounded-2xl p-5 text-white shadow-lg flex items-center justify-between">
+    <div>
+      <p class="text-white/80 text-xs font-bold uppercase tracking-widest mb-1" id="heroLabel">Day 1 of 6</p>
+      <h2 class="text-xl font-black" id="heroDate">Tuesday, Aug 5</h2>
+      <p class="text-white/80 text-sm mt-0.5" id="heroTheme">Arrival</p>
+    </div>
+    <button onclick="openSuggestModal(null)" class="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+      + Add idea
+    </button>
+  </div>
+</div>
+
+<!-- Itinerary content -->
+<main class="max-w-2xl mx-auto px-4 py-6" id="itineraryContent"></main>
+
+<!-- Bottom CTAs -->
+<div class="max-w-2xl mx-auto px-4 pb-10 space-y-3">
+  <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5 flex items-center gap-4">
+    <div class="flex-1">
+      <p class="font-bold text-gray-900 text-sm">Got a better idea? 💡</p>
+      <p class="text-gray-500 text-xs mt-0.5">Suggest edits or additions — everyone with the link can see them.</p>
+    </div>
+    <button onclick="openSuggestModal(null)" class="flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">Suggest</button>
+  </div>
+  <button onclick="openSuggestions()" class="w-full flex items-center justify-between bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:border-sky-300 transition-colors group">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">💬</span>
+      <div class="text-left">
+        <p class="font-bold text-gray-900 text-sm">View All Suggestions</p>
+        <p class="text-gray-400 text-xs" id="suggSummary">Loading...</p>
+      </div>
+    </div>
+    <svg class="w-5 h-5 text-gray-400 group-hover:text-sky-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+  </button>
+</div>
+
+<!-- ═══════════════════════ Suggestions Panel ═══════════════════════ -->
+<div id="suggOverlay" class="fixed inset-0 z-30 bg-black/20 modal-bg hidden sm:hidden" onclick="closeSuggestions()"></div>
+<div id="suggPanel" class="fixed top-0 right-0 h-full z-30 w-full sm:w-96 bg-white shadow-2xl flex flex-col transition-transform duration-300 translate-x-full">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white">
+    <div>
+      <h2 class="font-bold text-gray-900 text-lg">Suggestions</h2>
+      <p class="text-xs text-gray-500" id="suggPanelMeta">0 pending</p>
+    </div>
+    <button onclick="closeSuggestions()" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+  </div>
+  <div id="suggList" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+</div>
+
+<!-- ═══════════════════════ Suggest Modal ═══════════════════════ -->
+<div id="modalOverlay" class="fixed inset-0 z-40 flex items-end sm:items-center justify-center modal-bg bg-black/40 hidden" onclick="if(event.target===this)closeModal()">
+  <div class="bg-white w-full sm:max-w-lg sm:mx-4 rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 animate-slide-up">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-lg font-bold text-gray-900" id="modalTitle">💡 Suggest a Change</h2>
+        <p class="text-sm text-gray-500 mt-0.5" id="modalSubtitle"></p>
+      </div>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none p-1">×</button>
+    </div>
+    <form id="suggForm" onsubmit="submitSuggestion(event)" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Your name</label>
+        <input id="sName" type="text" placeholder="e.g. Jake" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Type</label>
+        <div class="flex gap-2 flex-wrap" id="typeButtons">
+          <button type="button" data-type="general" onclick="selectType(this)" class="type-btn active-type px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-sky-500 text-white border-sky-500">💬 General</button>
+          <button type="button" data-type="edit"    onclick="selectType(this)" class="type-btn px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-white text-gray-600 border-gray-200 hover:border-sky-300">✏️ Edit</button>
+          <button type="button" data-type="addition" onclick="selectType(this)" class="type-btn px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-white text-gray-600 border-gray-200 hover:border-sky-300">➕ Add</button>
+          <button type="button" data-type="swap"   onclick="selectType(this)" class="type-btn px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-white text-gray-600 border-gray-200 hover:border-sky-300">🔄 Swap</button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Your suggestion</label>
+        <textarea id="sContent" rows="4" required placeholder='e.g. "We should add a boat trip on Day 2" or "There&apos;s a better restaurant nearby"' class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm resize-none"></textarea>
+      </div>
+      <button type="submit" id="submitBtn" class="w-full py-3 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition-colors">
+        Submit Suggestion
+      </button>
+      <p id="noSupabaseNote" class="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2 hidden">
+        ⚠️ Suggestions are view-only on this device until Supabase credentials are configured.
+      </p>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden"></div>
+
+<!-- ══════════════════════════════════════════
+     DATA + LOGIC
+     ══════════════════════════════════════════ -->
+<script type="module">
+// ── Itinerary data ────────────────────────────────────────────────
+const DAYS = [
+  { n:1, label:'Day 1', date:'Tuesday, Aug 5',   shortDate:'Aug 5',  theme:'Arrival',    gradient:'from-sky-500 to-blue-600' },
+  { n:2, label:'Day 2', date:'Wednesday, Aug 6', shortDate:'Aug 6',  theme:'Adventure',  gradient:'from-orange-400 to-pink-500' },
+  { n:3, label:'Day 3', date:'Thursday, Aug 7',  shortDate:'Aug 7',  theme:'Beach & Chill', gradient:'from-teal-400 to-cyan-600' },
+  { n:4, label:'Day 4', date:'Friday, Aug 8',    shortDate:'Aug 8',  theme:'Limassol',   gradient:'from-violet-500 to-purple-600' },
+  { n:5, label:'Day 5', date:'Saturday, Aug 9',  shortDate:'Aug 9',  theme:'Paphos',     gradient:'from-amber-400 to-orange-500' },
+  { n:6, label:'Day 6', date:'Sunday, Aug 10',   shortDate:'Aug 10', theme:'Last Day',   gradient:'from-emerald-400 to-teal-600' },
+]
+
+const ITEMS = [
+  // Day 1
+  { id:'d1-1', day:1, slot:'morning',   type:'transport', emoji:'✈️', title:'Fly into Larnaca Airport', location:'Larnaca International Airport (LCA)', desc:"Land, grab bags, exchange euros if needed. Pick up a SIM card from the airport kiosks while you're there." },
+  { id:'d1-2', day:1, slot:'afternoon', type:'transport', emoji:'🚌', title:'Taxi to Ayia Napa', location:'Larnaca → Ayia Napa', desc:'Shared taxi or OSYPA bus (~45 min, ~€50 shared or €3 bus). Check in, dump bags, sort the group.' },
+  { id:'d1-3', day:1, slot:'afternoon', type:'activity',  emoji:'🏖️', title:'Nissi Beach', location:'Nissi Beach, Ayia Napa', desc:'Hit Nissi to decompress after the flight. Crystal-clear turquoise water, white sand. Grab a sunbed and a cold Keo beer.' },
+  { id:'d1-4', day:1, slot:'evening',   type:'meal',      emoji:'🐙', title:'Vassos Fish Harbour Restaurant', location:'Ayia Napa Harbour', desc:'Fresh seafood right on the harbour. Grilled octopus, calamari, and the full mezedes spread. Book ahead if you can.' },
+  { id:'d1-5', day:1, slot:'night',     type:'nightlife', emoji:'🍻', title:'Ayia Napa Square Bar Crawl', location:'Ayia Napa Town Square', desc:'First night — ease in. Start at the main square, hit Bedrock Inn and Aqua Bar. End at Castle Club or Carwash for the full Ayia Napa experience.' },
+  // Day 2
+  { id:'d2-1', day:2, slot:'morning',   type:'meal',      emoji:'☕', title:'Breakfast Fuel Up', location:'Ayia Napa Town', desc:"Full English or Cyprus breakfast before the day's missions. Halloumi, eggs, fresh bread. You'll need the energy." },
+  { id:'d2-2', day:2, slot:'morning',   type:'activity',  emoji:'🚣', title:'Cape Greco Sea Caves Kayaking', location:'Cape Greco National Park', desc:'Rent kayaks and explore the famous sea caves and Blue Lagoon. Absolute natural wonder — turquoise water, dramatic limestone cliffs.' },
+  { id:'d2-3', day:2, slot:'afternoon', type:'activity',  emoji:'🤿', title:'Watersports at Makronissos Beach', location:'Makronissos Beach, Ayia Napa', desc:'Jet skis, banana boats, parasailing, flyboarding — go full send. Budget ~€30–60 each.' },
+  { id:'d2-4', day:2, slot:'afternoon', type:'meal',      emoji:'🍔', title:'Beach Club Lunch', location:'Makronissos Beach Area', desc:'Burgers, wraps, halloumi fries, and cold beers with your feet in the sand.' },
+  { id:'d2-5', day:2, slot:'evening',   type:'activity',  emoji:'🌅', title:'Sunset Drinks at Rock Cafe', location:'Rock Cafe, Ayia Napa', desc:'Watch the sunset with cocktails at the iconic Rock Cafe — built into the cliffside. Arrive early for a spot. Get the frozen cocktails.' },
+  { id:'d2-6', day:2, slot:'night',     type:'nightlife', emoji:'🎉', title:'Kool Pool Party or Club Camelot', location:'Ayia Napa', desc:'The Kool Pool Party is one of the best things in Ayia Napa — huge outdoor pool, international DJs, thousands of people. Check the schedule. If not on, Club Camelot is the next best thing.' },
+  // Day 3
+  { id:'d3-1', day:3, slot:'morning',   type:'activity',  emoji:'🌊', title:'Fig Tree Bay, Protaras', location:'Fig Tree Bay, Protaras', desc:"Consistently ranked one of Europe's top 10 beaches. Calm, crystal-clear water — visible to 5m+ depth. Get there by 10am for a sunbed." },
+  { id:'d3-2', day:3, slot:'afternoon', type:'activity',  emoji:'🏄', title:'Snorkeling & Paddleboarding', location:'Fig Tree Bay, Protaras', desc:'Rent gear from beach vendors. The water clarity is insane — paddle out to the small rocky islands.' },
+  { id:'d3-3', day:3, slot:'afternoon', type:'meal',      emoji:'🥙', title:'Meze Lunch at a Protaras Taverna', location:'Protaras', desc:'Traditional Cypriot meze — halloumi, souvlaki, kleftiko, loukoumades. This is the real food Cyprus is known for.' },
+  { id:'d3-4', day:3, slot:'evening',   type:'meal',      emoji:'🐟', title:'Seafood Dinner at Pernera', location:'Pernera, Protaras', desc:'Fresh catch of the day, grilled whole fish, cold Keo beers watching the sea turn golden.' },
+  { id:'d3-5', day:3, slot:'night',     type:'nightlife', emoji:'🍹', title:'Protaras Bar Strip', location:'Protaras', desc:'More laid-back than Ayia Napa. Good vibes at Sirens Bar and the strip along Fig Tree Bay Road. Recovery night — cocktails, not carnage.' },
+  // Day 4
+  { id:'d4-1', day:4, slot:'morning',   type:'transport', emoji:'🚗', title:'Drive to Limassol', location:'Ayia Napa → Limassol', desc:'Rent a car (~€30/day split) or take the OSYPA intercity bus (~€8, 1.5hr). Early start to maximise time.' },
+  { id:'d4-2', day:4, slot:'morning',   type:'activity',  emoji:'🏰', title:'Limassol Old Town & Medieval Castle', location:'Limassol Old Town', desc:"Explore the old town's narrow streets. Visit the Medieval Castle (€4.50) — Richard the Lionheart married here in 1191 before leaving for the Crusades." },
+  { id:'d4-3', day:4, slot:'afternoon', type:'activity',  emoji:'⚓', title:'Limassol Marina', location:'Limassol Marina', desc:'Walk the marina, spot the mega yachts, grab coffee at a waterfront spot. Cyprus money is something else.' },
+  { id:'d4-4', day:4, slot:'afternoon', type:'meal',      emoji:'🍽️', title:'Traditional Meze at Ladas Tavern', location:'Limassol Town', desc:'No frills, legendary Cypriot food. Massive portions, local crowd, cheap prices. Order the full meze.' },
+  { id:'d4-5', day:4, slot:'evening',   type:'meal',      emoji:'🥂', title:'Drinks at Saripolou Square', location:'Saripolou Square, Limassol', desc:"The bar square in Limassol's old town. Outdoor seating, cocktails, great atmosphere before heading back." },
+  { id:'d4-6', day:4, slot:'night',     type:'transport', emoji:'🌙', title:'Return to Ayia Napa', location:'Limassol → Ayia Napa', desc:"Head back to base. If you rented a car, use it. Don't drink and drive — sort a taxi." },
+  // Day 5
+  { id:'d5-1', day:5, slot:'morning',   type:'transport', emoji:'🚗', title:'Drive to Paphos', location:'Ayia Napa → Paphos', desc:'Early start — 2.5 hours via A1/A6 motorway. Worth every minute of the drive.' },
+  { id:'d5-2', day:5, slot:'morning',   type:'activity',  emoji:'🏛️', title:'Paphos Archaeological Park', location:'Paphos Archaeological Park', desc:'UNESCO World Heritage site. Roman mosaics that are genuinely one of the most impressive things in the Med. €6.50 entry. Wear sunscreen.' },
+  { id:'d5-3', day:5, slot:'afternoon', type:'activity',  emoji:'💎', title:"Aphrodite's Rock (Petra tou Romiou)", location:'Petra tou Romiou, Paphos', desc:"The mythical birthplace of Aphrodite. Dramatic rocky coastline, crystal-clear water. Swim around the rock — legend says it brings luck in love." },
+  { id:'d5-4', day:5, slot:'afternoon', type:'meal',      emoji:'🦑', title:'Lunch at Paphos Harbour', location:'Paphos Old Harbour', desc:'Tons of restaurants along the harbour. Get a table with a harbour view and order fresh fish or calamari.' },
+  { id:'d5-5', day:5, slot:'evening',   type:'meal',      emoji:'🍤', title:"Dinner at Theo's Seafood Restaurant", location:'Paphos', desc:"Consistently rated best seafood in Paphos. Pricier (~€25–35 each) but it's the last proper dinner. Book ahead." },
+  { id:'d5-6', day:5, slot:'night',     type:'nightlife', emoji:'🎶', title:'Paphos Bar Street', location:'Paphos Bar Street', desc:'Apostolou Pavlou Avenue is the main strip. More relaxed than Ayia Napa — cocktail bars over mega clubs. Great final night.' },
+  // Day 6
+  { id:'d6-1', day:6, slot:'morning',   type:'activity',  emoji:'🌅', title:'Final Sunrise Beach Session', location:'Nissi Beach, Ayia Napa', desc:'Last morning in Cyprus. Nissi Beach before the crowds arrive — the early light is perfect. Soak it all in.' },
+  { id:'d6-2', day:6, slot:'morning',   type:'meal',      emoji:'🍳', title:'Final Cyprus Breakfast', location:'Ayia Napa', desc:'Full Cypriot breakfast — halloumi, fried eggs, olives, fresh bread, tomatoes. Sit outside. Last one for a while.' },
+  { id:'d6-3', day:6, slot:'afternoon', type:'activity',  emoji:'🛍️', title:'Souvenir Shopping', location:'Ayia Napa Town', desc:"Grab vacuum-packed halloumi (clears customs), Commandaria wine (world's oldest wine designation), olive oil, and the Cyprus fridge magnet." },
+  { id:'d6-4', day:6, slot:'afternoon', type:'transport', emoji:'✈️', title:'Transfer to Larnaca Airport', location:'Larnaca Airport', desc:'Allow 2 hours for the drive + check-in + security. Do not miss the flight because someone wanted one more swim.' },
+  { id:'d6-5', day:6, slot:'evening',   type:'transport', emoji:'🏠', title:'Fly Home', location:'In the air', desc:"Wheels up. Trip complete. Already planning the next one." },
+]
+
+const SLOT_ORDER = ['morning','afternoon','evening','night']
+const SLOT_LABEL = { morning:'Morning', afternoon:'Afternoon', evening:'Evening', night:'Night' }
+const SLOT_EMOJI = { morning:'🌅', afternoon:'☀️', evening:'🌇', night:'🌙' }
+const TYPE_BORDER = { activity:'border-sky-400',   meal:'border-orange-400', nightlife:'border-purple-400', transport:'border-gray-300' }
+const TYPE_BG     = { activity:'bg-sky-50',        meal:'bg-orange-50',      nightlife:'bg-purple-50',      transport:'bg-gray-50' }
+const TYPE_BADGE  = { activity:'bg-sky-100 text-sky-700', meal:'bg-orange-100 text-orange-700', nightlife:'bg-purple-100 text-purple-700', transport:'bg-gray-100 text-gray-600' }
+
+// ── State ─────────────────────────────────────────────────────────
+let currentDay = 1
+let suggestions = []
+let modalItemId = null
+let selectedType = 'general'
+let supabase = null
+
+// ── Supabase init ─────────────────────────────────────────────────
+async function initSupabase() {
+  const url = window.SUPABASE_URL
+  const key = window.SUPABASE_ANON_KEY
+  if (!url || url === 'YOUR_SUPABASE_URL') return
+
+  try {
+    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
+    supabase = createClient(url, key)
+    await loadSuggestions()
+  } catch(e) {
+    console.warn('Supabase init failed:', e)
+  }
+}
+
+async function loadSuggestions() {
+  if (!supabase) return
+  const { data } = await supabase.from('suggestions').select('*').order('created_at', { ascending: false })
+  if (data) {
+    suggestions = data
+    renderSuggestionsList()
+    updateSuggStats()
+  }
+}
+
+// ── Render day tabs ───────────────────────────────────────────────
+function renderTabs() {
+  const container = document.getElementById('dayTabs')
+  container.innerHTML = DAYS.map(d => {
+    const active = d.n === currentDay
+    const daySugCount = suggestions.filter(s => s.day_number === d.n && s.status === 'pending').length
+    return `
+      <button onclick="selectDay(${d.n})" class="flex-shrink-0 flex flex-col items-center px-4 py-2 rounded-xl transition-all text-xs font-bold relative
+        ${active ? `bg-gradient-to-b ${d.gradient} text-white shadow-md` : 'text-gray-500 hover:bg-gray-50'}">
+        <span class="text-[10px] ${active ? 'text-white/80' : 'text-gray-400'}">${d.shortDate}</span>
+        <span>${d.label}</span>
+        ${daySugCount > 0 ? `<span class="absolute -top-0.5 -right-0.5 bg-amber-400 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">${daySugCount}</span>` : ''}
+      </button>`
+  }).join('')
+}
+
+// ── Render day hero ───────────────────────────────────────────────
+function renderHero() {
+  const d = DAYS[currentDay - 1]
+  const hero = document.getElementById('dayHero')
+  hero.className = `rounded-2xl p-5 text-white shadow-lg flex items-center justify-between bg-gradient-to-r ${d.gradient}`
+  document.getElementById('heroLabel').textContent = `Day ${d.n} of 6`
+  document.getElementById('heroDate').textContent = d.date
+  document.getElementById('heroTheme').textContent = d.theme
+}
+
+// ── Render itinerary ─────────────────────────────────────────────
+function renderItinerary() {
+  const dayItems = ITEMS.filter(i => i.day === currentDay)
+  const content = document.getElementById('itineraryContent')
+
+  if (dayItems.length === 0) {
+    content.innerHTML = `<div class="text-center py-16"><p class="text-5xl mb-3">📋</p><p class="text-gray-500 font-semibold">No activities yet</p></div>`
+    return
+  }
+
+  content.innerHTML = SLOT_ORDER.map(slot => {
+    const slotItems = dayItems.filter(i => i.slot === slot)
+    if (!slotItems.length) return ''
+
+    const cards = slotItems.map(item => {
+      const suggCount = suggestions.filter(s => s.item_id === item.id && s.status === 'pending').length
+      return `
+        <div class="card-lift bg-white border-l-4 ${TYPE_BORDER[item.type]} ${TYPE_BG[item.type]} rounded-2xl shadow-sm overflow-hidden">
+          <div class="p-4">
+            <div class="flex items-start gap-3">
+              <span class="text-2xl mt-0.5 flex-shrink-0">${item.emoji}</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-1">
+                  <h3 class="font-bold text-gray-900 text-sm leading-tight">${item.title}</h3>
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[item.type]}">${item.type}</span>
+                </div>
+                ${item.location ? `<p class="text-xs text-gray-500 flex items-center gap-1 mb-1.5">
+                  <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  ${item.location}
+                </p>` : ''}
+                ${item.desc ? `<p class="text-xs text-gray-600 leading-relaxed">${item.desc}</p>` : ''}
+              </div>
+            </div>
+            <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+              <button onclick="openSuggestModal('${item.id}')" class="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-sky-600 transition-colors group">
+                <svg class="w-3.5 h-3.5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Suggest edit
+              </button>
+              ${suggCount > 0 ? `<span class="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">${suggCount} suggestion${suggCount !== 1 ? 's' : ''}</span>` : ''}
+            </div>
+          </div>
+        </div>`
+    }).join('')
+
+    return `
+      <section class="mb-8">
+        <div class="flex items-center gap-2 mb-3 slot-line text-xs font-bold uppercase tracking-widest text-gray-400">
+          <span>${SLOT_EMOJI[slot]}</span><span>${SLOT_LABEL[slot]}</span>
+        </div>
+        <div class="space-y-3">${cards}</div>
+      </section>`
+  }).join('')
+}
+
+// ── Suggestions panel ─────────────────────────────────────────────
+function renderSuggestionsList() {
+  const list = document.getElementById('suggList')
+  if (!supabase) {
+    list.innerHTML = `<div class="text-center py-12">
+      <p class="text-3xl mb-3">🔌</p>
+      <p class="text-gray-500 font-semibold text-sm">Suggestions not connected</p>
+      <p class="text-gray-400 text-xs mt-1">Add Supabase credentials to enable this feature</p>
+    </div>`
+    document.getElementById('suggSummary').textContent = 'Connect Supabase to enable suggestions'
+    return
+  }
+
+  const pending = suggestions.filter(s => s.status === 'pending')
+  const applied = suggestions.filter(s => s.status === 'applied')
+
+  document.getElementById('suggPanelMeta').textContent = `${pending.length} pending · ${applied.length} applied`
+  updateSuggStats()
+
+  if (suggestions.length === 0) {
+    list.innerHTML = `<div class="text-center py-12"><p class="text-4xl mb-3">💬</p><p class="text-gray-500 font-semibold">No suggestions yet</p><p class="text-gray-400 text-xs mt-1">Be the first!</p></div>`
+    return
+  }
+
+  const TBADGE = { general:'bg-blue-50 text-blue-700', edit:'bg-orange-50 text-orange-700', addition:'bg-green-50 text-green-700', swap:'bg-purple-50 text-purple-700' }
+
+  function card(s) {
+    const item = ITEMS.find(i => i.id === s.item_id)
+    const dt = new Date(s.created_at)
+    const when = dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'}) + ' at ' + dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
+    return `
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 ${s.status==='applied'?'opacity-60':''}">
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0">${s.author_name.charAt(0).toUpperCase()}</div>
+            <div><p class="text-sm font-bold text-gray-900">${s.author_name}</p><p class="text-xs text-gray-400">${when}</p></div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${TBADGE[s.type]||TBADGE.general}">${s.type}</span>
+            ${s.status==='applied'?'<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">✓ applied</span>':''}
+          </div>
+        </div>
+        ${item ? `<p class="text-xs text-gray-400 mb-1.5 pl-10">Re: ${item.emoji} ${item.title}</p>` : (s.day_number ? `<p class="text-xs text-gray-400 mb-1.5 pl-10">Day ${s.day_number}</p>` : '')}
+        <p class="text-sm text-gray-700 leading-relaxed pl-10">${s.content}</p>
+      </div>`
+  }
+
+  list.innerHTML = ''
+  if (pending.length) {
+    list.innerHTML += `<p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Pending (${pending.length})</p>`
+    list.innerHTML += pending.map(card).join('')
+  }
+  if (applied.length) {
+    list.innerHTML += `<p class="text-xs font-bold uppercase tracking-widest text-gray-400 mt-4 mb-2">Applied (${applied.length})</p>`
+    list.innerHTML += applied.map(card).join('')
+  }
+}
+
+function updateSuggStats() {
+  const pending = suggestions.filter(s => s.status === 'pending').length
+  document.getElementById('statSugCount').textContent = suggestions.length
+  document.getElementById('suggSummary').textContent = supabase
+    ? (suggestions.length === 0 ? 'No suggestions yet' : `${pending} pending · ${suggestions.filter(s=>s.status==='applied').length} applied`)
+    : 'Connect Supabase to enable suggestions'
+}
+
+// ── Modal ─────────────────────────────────────────────────────────
+window.openSuggestModal = function(itemId) {
+  modalItemId = itemId
+  const item = itemId ? ITEMS.find(i => i.id === itemId) : null
+  document.getElementById('modalTitle').textContent = item ? '💡 Suggest a Change' : '➕ Propose Something New'
+  document.getElementById('modalSubtitle').textContent = item ? `Re: ${item.emoji} ${item.title}` : `Day ${currentDay}`
+  document.getElementById('sName').value = ''
+  document.getElementById('sContent').value = ''
+  selectType(document.querySelector('[data-type="general"]'))
+  document.getElementById('noSupabaseNote').classList.toggle('hidden', !!supabase)
+  document.getElementById('modalOverlay').classList.remove('hidden')
+}
+
+window.closeModal = function() {
+  document.getElementById('modalOverlay').classList.add('hidden')
+}
+
+window.selectType = function(btn) {
+  selectedType = btn.dataset.type
+  document.querySelectorAll('.type-btn').forEach(b => {
+    b.className = 'type-btn px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-white text-gray-600 border-gray-200 hover:border-sky-300'
+  })
+  btn.className = 'type-btn active-type px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all bg-sky-500 text-white border-sky-500'
+}
+
+window.submitSuggestion = async function(e) {
+  e.preventDefault()
+  const name = document.getElementById('sName').value.trim()
+  const content = document.getElementById('sContent').value.trim()
+  if (!name || !content) return
+
+  const btn = document.getElementById('submitBtn')
+  btn.textContent = 'Submitting...'
+  btn.disabled = true
+
+  if (supabase) {
+    const { error } = await supabase.from('suggestions').insert({
+      author_name: name,
+      content,
+      type: selectedType,
+      item_id: modalItemId || null,
+      day_number: currentDay,
+      status: 'pending',
+    })
+    if (error) {
+      showToast('Failed to submit. Try again.', 'error')
+    } else {
+      showToast('Suggestion submitted! 🎉', 'success')
+      await loadSuggestions()
+      renderItinerary()
+      renderTabs()
+    }
+  } else {
+    // No Supabase — store locally as UX demo
+    suggestions.unshift({ id: Date.now(), author_name: name, content, type: selectedType, item_id: modalItemId, day_number: currentDay, status: 'pending', created_at: new Date().toISOString() })
+    renderSuggestionsList()
+    updateSuggStats()
+    renderItinerary()
+    renderTabs()
+    showToast('Saved locally (Supabase not connected)', 'success')
+  }
+
+  btn.textContent = 'Submit Suggestion'
+  btn.disabled = false
+  closeModal()
+}
+
+// ── Suggestions panel ─────────────────────────────────────────────
+window.openSuggestions = function() {
+  document.getElementById('suggPanel').classList.remove('translate-x-full')
+  document.getElementById('suggOverlay').classList.remove('hidden')
+}
+window.closeSuggestions = function() {
+  document.getElementById('suggPanel').classList.add('translate-x-full')
+  document.getElementById('suggOverlay').classList.add('hidden')
+}
+
+// ── Day navigation ────────────────────────────────────────────────
+window.selectDay = function(n) {
+  currentDay = n
+  renderTabs()
+  renderHero()
+  renderItinerary()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// ── Share ─────────────────────────────────────────────────────────
+document.getElementById('shareBtn').addEventListener('click', () => {
+  navigator.clipboard.writeText(window.location.href)
+  document.getElementById('shareBtnTxt').textContent = 'Copied!'
+  setTimeout(() => document.getElementById('shareBtnTxt').textContent = 'Share', 2000)
+})
+
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast')
+  const bg = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-indigo-600'
+  t.className = `fixed bottom-6 right-6 z-50 ${bg} text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-semibold flex items-center gap-2 toast-in`
+  t.textContent = msg
+  t.classList.remove('hidden')
+  setTimeout(() => t.classList.add('hidden'), 3500)
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
+renderTabs()
+renderHero()
+renderItinerary()
+updateSuggStats()
+initSupabase()
+</script>
+</body>
+</html>

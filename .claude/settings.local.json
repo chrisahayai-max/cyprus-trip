@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(cmd.exe /c \"where node && where npm\")",
+      "Bash(cmd.exe /c \"node -v\")",
+      "Bash(cmd.exe /c \"npm -v\")",
+      "Bash(cmd.exe /c \"where npm 2>nul & where node 2>nul & echo PATH=%PATH%\")",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Users/Christopher/AppData/Roaming/**)",
+      "Read(//c/Users/Christopher/AppData/Local/Programs/**)",
+      "Read(//c//**)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cmd.exe /c \"git --version\")",
+      "Bash(cmd.exe /c \"git --version 2>&1\")",
+      "Bash(cmd.exe /c \"python --version 2>&1 & python3 --version 2>&1\")",
+      "Bash(git --version)",
+      "Bash(gh --version)"
+    ]
+  }
+}

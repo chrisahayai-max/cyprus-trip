@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Cyprus Trip Planner",
+      "runtimeExecutable": "C:/Users/Christopher/AppData/Local/Python/bin/python.exe",
+      "runtimeArgs": ["-m", "http.server", "3000", "--directory", "C:/Users/Christopher/Downloads/Cyprus/static"],
+      "port": 3000
+    }
+  ]
+}
