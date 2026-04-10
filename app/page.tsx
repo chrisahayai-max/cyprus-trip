@@ -108,8 +108,15 @@ function AIChatModal({
       setMessages([...newMessages, { role: 'assistant', content: data.reply }])
       if (data.changesApplied) { setChangesApplied((c) => c + 1); onRefresh() }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong'
-      setMessages([...newMessages, { role: 'assistant', content: `Oops — ${msg}. Try again!` }])
+      let msg = 'Something went wrong. Try again!'
+      if (err instanceof Error) {
+        if (err.message.includes('credit') || err.message.includes('billing')) {
+          msg = 'The AI is temporarily down (credits need topping up). Check back soon!'
+        } else if (err.message.length < 120) {
+          msg = err.message
+        }
+      }
+      setMessages([...newMessages, { role: 'assistant', content: msg }])
     } finally {
       setThinking(false)
       setTimeout(() => inputRef.current?.focus(), 100)

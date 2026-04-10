@@ -217,7 +217,23 @@ ${JSON.stringify(items, null, 2)}`
     return NextResponse.json({ reply: replyText, changesApplied })
   } catch (err: unknown) {
     console.error('Chat error:', err)
-    const message = err instanceof Error ? err.message : 'Unknown error'
+    let message = 'Something went wrong. Try again in a moment.'
+    if (err instanceof Error) {
+      if (err.message.includes('credit balance') || err.message.includes('billing')) {
+        message = 'The AI is temporarily unavailable (API credits need topping up). Check back soon!'
+      } else if (err.message.includes('rate_limit')) {
+        message = 'Too many requests at once — wait a few seconds and try again.'
+      } else if (err.message.includes('invalid_api_key')) {
+        message = 'AI config issue — let the trip organiser know.'
+      } else {
+        message = err.message
+      }
+    }
+    // Try to parse Anthropic error JSON buried in the message
+    try {
+      const match = message.match(/\{.*"message":"([^"]+)".*\}/)
+      if (match) message = match[1]
+    } catch { /* ignore */ }
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
