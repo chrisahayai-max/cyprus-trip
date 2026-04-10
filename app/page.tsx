@@ -66,14 +66,10 @@ function AIChatModal({
   onClose: () => void
   onRefresh: () => void
 }) {
-  const [name, setName] = useState(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem('cy_name') || ''
-    return ''
-  })
-  const [nameConfirmed, setNameConfirmed] = useState(() => {
-    if (typeof window !== 'undefined') return !!localStorage.getItem('cy_name')
-    return false
-  })
+  const storedName = typeof window !== 'undefined' ? localStorage.getItem('cy_name') || '' : ''
+  const [name, setName] = useState(storedName)
+  const [nameConfirmed, setNameConfirmed] = useState(!!storedName)
+  const [initialIdea, setInitialIdea] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
@@ -85,27 +81,12 @@ function AIChatModal({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinking])
 
-  useEffect(() => {
-    if (nameConfirmed) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-  }, [nameConfirmed])
-
-  function confirmName(e: React.FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) return
-    localStorage.setItem('cy_name', name.trim())
-    setNameConfirmed(true)
-  }
-
-  async function sendMessage() {
-    if (!input.trim() || thinking) return
-    const userMsg: ChatMessage = { role: 'user', content: input.trim() }
-    const newMessages = [...messages, userMsg]
+  // Core send function — takes explicit text so we can call it programmatically
+  async function sendText(text: string, history: ChatMessage[]) {
+    const userMsg: ChatMessage = { role: 'user', content: text.trim() }
+    const newMessages = [...history, userMsg]
     setMessages(newMessages)
-    setInput('')
     setThinking(true)
-
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -118,28 +99,42 @@ function AIChatModal({
             item_id: item?.id,
             item_title: item?.title,
             item_emoji: item?.emoji,
-            author_name: name.trim(),
+            author_name: name.trim() || storedName,
           },
         }),
       })
-
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-
       setMessages([...newMessages, { role: 'assistant', content: data.reply }])
-      if (data.changesApplied) {
-        setChangesApplied((c) => c + 1)
-        onRefresh()
-      }
+      if (data.changesApplied) { setChangesApplied((c) => c + 1); onRefresh() }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       setMessages([...newMessages, { role: 'assistant', content: `Oops — ${msg}. Try again!` }])
     } finally {
       setThinking(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
-  // ── Name entry screen ──────────────────────────────────────────
+  // Pre-fill form submit — saves name and auto-sends first message
+  async function handlePreFillSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim() || !initialIdea.trim()) return
+    localStorage.setItem('cy_name', name.trim())
+    setNameConfirmed(true)
+    // Auto-send with empty history
+    await sendText(initialIdea, [])
+  }
+
+  // Follow-up messages in chat
+  async function handleSend() {
+    if (!input.trim() || thinking) return
+    const text = input
+    setInput('')
+    await sendText(text, messages)
+  }
+
+  // ── Pre-fill screen (shown to new users OR returning users opening the modal) ──
   if (!nameConfirmed) {
     return (
       <div
@@ -151,35 +146,54 @@ function AIChatModal({
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xl">✨</div>
               <div>
-                <h2 className="font-black text-gray-900">Chat with AI Planner</h2>
+                <h2 className="font-black text-gray-900 text-base">AI Trip Planner</h2>
                 <p className="text-xs text-gray-500">
-                  {item ? `Re: ${item.emoji} ${item.title}` : `Day ${dayNumber} — add an idea`}
+                  {item ? `Re: ${item.emoji} ${item.title}` : `Day ${dayNumber} · ${DAY_LABELS[dayNumber]?.date}`}
                 </p>
               </div>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
           </div>
 
-          <form onSubmit={confirmName} className="space-y-4">
+          <form onSubmit={handlePreFillSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">What&apos;s your name?</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Your name</label>
               <input
                 autoFocus
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Jake"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm"
                 required
               />
-              <p className="text-xs text-gray-400 mt-1.5">So Claude knows who it&apos;s talking to 👋</p>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                {item ? 'What do you want to change?' : 'What\'s your idea?'}
+              </label>
+              <textarea
+                value={initialIdea}
+                onChange={(e) => setInitialIdea(e.target.value)}
+                placeholder={
+                  item
+                    ? `e.g. "Move this to the evening" or "Swap it for something else"`
+                    : `e.g. "Add a boat trip in the morning" or "What about quad bikes?"`
+                }
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm resize-none"
+                required
+              />
             </div>
             <button
               type="submit"
-              disabled={!name.trim()}
-              className="w-full py-3 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 disabled:opacity-40 text-white font-bold rounded-xl transition-all"
+              disabled={!name.trim() || !initialIdea.trim()}
+              className="w-full py-3 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 disabled:opacity-40 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
             >
-              Start chatting →
+              <span>Send to AI</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
             </button>
           </form>
         </div>
@@ -187,7 +201,7 @@ function AIChatModal({
     )
   }
 
-  // ── Chat screen ───────────────────────────────────────────────
+  // ── Chat screen ──────────────────────────────────────────────
   return (
     <div
       className="fixed inset-0 z-40 flex items-end sm:items-center justify-center modal-backdrop bg-black/40"
@@ -199,7 +213,7 @@ function AIChatModal({
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 flex-shrink-0">
           <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-base flex-shrink-0">✨</div>
           <div className="flex-1 min-w-0">
-            <p className="font-black text-gray-900 text-sm leading-tight">AI Planner</p>
+            <p className="font-black text-gray-900 text-sm leading-tight">AI Trip Planner</p>
             <p className="text-xs text-gray-500 truncate">
               {item ? `${item.emoji} ${item.title}` : `Day ${dayNumber} · Add an idea`}
             </p>
@@ -214,17 +228,10 @@ function AIChatModal({
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-          {messages.length === 0 && (
+          {messages.length === 0 && !thinking && (
             <div className="text-center py-10">
-              <p className="text-3xl mb-3">✨</p>
-              <p className="text-gray-700 font-semibold text-sm">
-                {item
-                  ? `How should we change "${item.title}"?`
-                  : `What do you want to add to Day ${dayNumber}?`}
-              </p>
-              <p className="text-gray-400 text-xs mt-1.5 max-w-xs mx-auto">
-                Tell me your idea — I&apos;ll update the itinerary on the spot if it works
-              </p>
+              <p className="text-3xl mb-2">✨</p>
+              <p className="text-gray-500 text-sm">Starting chat...</p>
             </div>
           )}
 
@@ -233,18 +240,16 @@ function AIChatModal({
               {msg.role === 'assistant' && (
                 <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs flex-shrink-0 mb-0.5">✨</div>
               )}
-              <div
-                className={`max-w-[78%] px-4 py-2.5 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-sky-500 text-white rounded-2xl rounded-br-sm'
-                    : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm'
-                }`}
-              >
+              <div className={`max-w-[78%] px-4 py-2.5 text-sm leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-sky-500 text-white rounded-2xl rounded-br-sm'
+                  : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm'
+              }`}>
                 {msg.content}
               </div>
               {msg.role === 'user' && (
                 <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mb-0.5">
-                  {name.charAt(0).toUpperCase()}
+                  {(name || storedName).charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
@@ -273,18 +278,13 @@ function AIChatModal({
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              placeholder="Type your idea..."
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+              placeholder="Reply..."
               disabled={thinking}
               className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm disabled:opacity-60"
             />
             <button
-              onClick={sendMessage}
+              onClick={handleSend}
               disabled={!input.trim() || thinking}
               className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 disabled:opacity-40 text-white p-2.5 rounded-xl transition-all flex-shrink-0"
             >
@@ -294,7 +294,7 @@ function AIChatModal({
             </button>
           </div>
           <p className="text-[11px] text-gray-400 mt-1.5 text-center">
-            Chatting as <span className="font-semibold text-gray-500">{name}</span> · Changes apply instantly for everyone
+            Chatting as <span className="font-semibold text-gray-500">{name || storedName}</span> · Changes apply instantly for everyone
           </p>
         </div>
       </div>
@@ -496,46 +496,6 @@ function SuggestionsPanel({
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AI Review Button
-// ─────────────────────────────────────────────────────────────────────────────
-function AIReviewButton({
-  pendingCount,
-  onReview,
-  reviewing,
-}: {
-  pendingCount: number
-  onReview: () => void
-  reviewing: boolean
-}) {
-  return (
-    <button
-      onClick={onReview}
-      disabled={reviewing || pendingCount === 0}
-      className="ai-btn relative flex items-center gap-2 px-4 py-2 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-    >
-      {reviewing ? (
-        <>
-          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          AI is reviewing...
-        </>
-      ) : (
-        <>
-          <span>✨</span>
-          AI Review
-          {pendingCount > 0 && (
-            <span className="bg-white/30 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-              {pendingCount}
-            </span>
-          )}
-        </>
-      )}
-    </button>
-  )
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Skeleton loader
@@ -566,7 +526,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [suggestTarget, setSuggestTarget] = useState<ItineraryItem | null | 'new'>()
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [reviewing, setReviewing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'loading' } | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -636,37 +595,6 @@ export default function Home() {
     }
   }
 
-  // AI review
-  async function handleAIReview() {
-    if (pendingSuggestions.length === 0) return
-    setReviewing(true)
-    showToast('Claude is reviewing all suggestions...', 'loading')
-
-    try {
-      const res = await fetch('/api/ai-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, suggestions: pendingSuggestions }),
-      })
-
-      const json = await res.json()
-
-      if (!res.ok) {
-        throw new Error(json.error || 'AI review failed')
-      }
-
-      dismissToast()
-      showToast(`Done! ${json.summary}`, 'success')
-      await loadData()
-    } catch (err: unknown) {
-      dismissToast()
-      const message = err instanceof Error ? err.message : 'AI review failed. Check your API key.'
-      showToast(message, 'error')
-    } finally {
-      setReviewing(false)
-    }
-  }
-
   // Copy share link
   function handleCopy() {
     navigator.clipboard.writeText(window.location.href)
@@ -712,11 +640,6 @@ export default function Home() {
                 </svg>
                 {copied ? 'Copied!' : 'Share'}
               </button>
-              <AIReviewButton
-                pendingCount={pendingSuggestions.length}
-                onReview={handleAIReview}
-                reviewing={reviewing}
-              />
             </div>
           </div>
 
