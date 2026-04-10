@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
   ItineraryItem,
@@ -49,118 +49,254 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Suggest Modal
+// AI Chat Modal
 // ─────────────────────────────────────────────────────────────────────────────
-function SuggestModal({
+type ChatMessage = { role: 'user' | 'assistant'; content: string }
+
+function AIChatModal({
   item,
   dayNumber,
+  items,
   onClose,
-  onSubmit,
+  onRefresh,
 }: {
   item: ItineraryItem | null
   dayNumber: number
+  items: ItineraryItem[]
   onClose: () => void
-  onSubmit: (data: { author: string; content: string; type: string; itemId: string | null; dayNumber: number }) => Promise<void>
+  onRefresh: () => void
 }) {
-  const [author, setAuthor] = useState('')
-  const [content, setContent] = useState('')
-  const [suggType, setSuggType] = useState('general')
-  const [submitting, setSubmitting] = useState(false)
+  const [name, setName] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('cy_name') || ''
+    return ''
+  })
+  const [nameConfirmed, setNameConfirmed] = useState(() => {
+    if (typeof window !== 'undefined') return !!localStorage.getItem('cy_name')
+    return false
+  })
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [thinking, setThinking] = useState(false)
+  const [changesApplied, setChangesApplied] = useState(0)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, thinking])
+
+  useEffect(() => {
+    if (nameConfirmed) {
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }, [nameConfirmed])
+
+  function confirmName(e: React.FormEvent) {
     e.preventDefault()
-    if (!author.trim() || !content.trim()) return
-    setSubmitting(true)
-    await onSubmit({
-      author: author.trim(),
-      content: content.trim(),
-      type: suggType,
-      itemId: item?.id ?? null,
-      dayNumber,
-    })
-    setSubmitting(false)
-    onClose()
+    if (!name.trim()) return
+    localStorage.setItem('cy_name', name.trim())
+    setNameConfirmed(true)
   }
 
+  async function sendMessage() {
+    if (!input.trim() || thinking) return
+    const userMsg: ChatMessage = { role: 'user', content: input.trim() }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
+    setInput('')
+    setThinking(true)
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: newMessages,
+          items,
+          context: {
+            day_number: dayNumber,
+            item_id: item?.id,
+            item_title: item?.title,
+            item_emoji: item?.emoji,
+            author_name: name.trim(),
+          },
+        }),
+      })
+
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+
+      setMessages([...newMessages, { role: 'assistant', content: data.reply }])
+      if (data.changesApplied) {
+        setChangesApplied((c) => c + 1)
+        onRefresh()
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setMessages([...newMessages, { role: 'assistant', content: `Oops — ${msg}. Try again!` }])
+    } finally {
+      setThinking(false)
+    }
+  }
+
+  // ── Name entry screen ──────────────────────────────────────────
+  if (!nameConfirmed) {
+    return (
+      <div
+        className="fixed inset-0 z-40 flex items-end sm:items-center justify-center modal-backdrop bg-black/40"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <div className="bg-white w-full sm:max-w-md sm:mx-4 rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 animate-slide-up">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xl">✨</div>
+              <div>
+                <h2 className="font-black text-gray-900">Chat with AI Planner</h2>
+                <p className="text-xs text-gray-500">
+                  {item ? `Re: ${item.emoji} ${item.title}` : `Day ${dayNumber} — add an idea`}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+          </div>
+
+          <form onSubmit={confirmName} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">What&apos;s your name?</label>
+              <input
+                autoFocus
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Jake"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm"
+                required
+              />
+              <p className="text-xs text-gray-400 mt-1.5">So Claude knows who it&apos;s talking to 👋</p>
+            </div>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="w-full py-3 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 disabled:opacity-40 text-white font-bold rounded-xl transition-all"
+            >
+              Start chatting →
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Chat screen ───────────────────────────────────────────────
   return (
     <div
       className="fixed inset-0 z-40 flex items-end sm:items-center justify-center modal-backdrop bg-black/40"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white w-full sm:max-w-lg sm:mx-4 rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 animate-slide-up">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              {item ? '💡 Suggest a Change' : '➕ Propose Something New'}
-            </h2>
-            {item && (
-              <p className="text-sm text-gray-500 mt-0.5">
-                Re: <span className="font-medium text-gray-700">{item.emoji} {item.title}</span>
-              </p>
-            )}
-            {!item && (
-              <p className="text-sm text-gray-500 mt-0.5">Day {dayNumber} · {DAY_LABELS[dayNumber]?.date}</p>
-            )}
+      <div className="bg-white w-full sm:max-w-lg sm:mx-4 h-[82vh] sm:h-[600px] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col animate-slide-up">
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 flex-shrink-0">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-base flex-shrink-0">✨</div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-gray-900 text-sm leading-tight">AI Planner</p>
+            <p className="text-xs text-gray-500 truncate">
+              {item ? `${item.emoji} ${item.title}` : `Day ${dayNumber} · Add an idea`}
+            </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none p-1">×</button>
+          {changesApplied > 0 && (
+            <span className="flex-shrink-0 text-xs bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full">
+              {changesApplied} change{changesApplied !== 1 ? 's' : ''} ✓
+            </span>
+          )}
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none ml-1">×</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Your name</label>
-            <input
-              type="text"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="e.g. Jake"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Suggestion type</label>
-            <div className="flex gap-2 flex-wrap">
-              {(['general', 'edit', 'addition', 'swap'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setSuggType(t)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                    suggType === t
-                      ? 'bg-sky-500 text-white border-sky-500'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300'
-                  }`}
-                >
-                  {t === 'general' ? '💬 General' : t === 'edit' ? '✏️ Edit' : t === 'addition' ? '➕ Add' : '🔄 Swap'}
-                </button>
-              ))}
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {messages.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-3xl mb-3">✨</p>
+              <p className="text-gray-700 font-semibold text-sm">
+                {item
+                  ? `How should we change "${item.title}"?`
+                  : `What do you want to add to Day ${dayNumber}?`}
+              </p>
+              <p className="text-gray-400 text-xs mt-1.5 max-w-xs mx-auto">
+                Tell me your idea — I&apos;ll update the itinerary on the spot if it works
+              </p>
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Your suggestion</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={item
-                ? `e.g. "Move this to the evening instead" or "There's a better spot nearby — try X"`
-                : `e.g. "We should add a boat trip on Day 2" or "What about renting quad bikes?"`
-              }
-              rows={4}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm resize-none"
-              required
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'assistant' && (
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs flex-shrink-0 mb-0.5">✨</div>
+              )}
+              <div
+                className={`max-w-[78%] px-4 py-2.5 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-sky-500 text-white rounded-2xl rounded-br-sm'
+                    : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-sm'
+                }`}
+              >
+                {msg.content}
+              </div>
+              {msg.role === 'user' && (
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mb-0.5">
+                  {name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {thinking && (
+            <div className="flex items-end gap-2">
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs flex-shrink-0 mb-0.5">✨</div>
+              <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm">
+                <div className="flex gap-1.5 items-center">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '160ms' }} />
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '320ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input bar */}
+        <div className="px-4 pb-5 pt-3 border-t border-gray-100 flex-shrink-0">
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage()
+                }
+              }}
+              placeholder="Type your idea..."
+              disabled={thinking}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm disabled:opacity-60"
             />
+            <button
+              onClick={sendMessage}
+              disabled={!input.trim() || thinking}
+              className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 disabled:opacity-40 text-white p-2.5 rounded-xl transition-all flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
           </div>
-
-          <button
-            type="submit"
-            disabled={submitting || !author.trim() || !content.trim()}
-            className="w-full py-3 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition-colors"
-          >
-            {submitting ? 'Submitting...' : 'Submit Suggestion'}
-          </button>
-        </form>
+          <p className="text-[11px] text-gray-400 mt-1.5 text-center">
+            Chatting as <span className="font-semibold text-gray-500">{name}</span> · Changes apply instantly for everyone
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -760,13 +896,14 @@ export default function Home() {
         onClose={() => setShowSuggestions(false)}
       />
 
-      {/* Suggest Modal */}
+      {/* AI Chat Modal */}
       {suggestTarget !== undefined && (
-        <SuggestModal
+        <AIChatModal
           item={suggestTarget === 'new' ? null : suggestTarget}
           dayNumber={selectedDay}
+          items={items}
           onClose={() => setSuggestTarget(undefined)}
-          onSubmit={handleSuggestionSubmit}
+          onRefresh={loadData}
         />
       )}
 
