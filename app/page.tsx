@@ -12,6 +12,7 @@ import {
   TYPE_COLORS,
   TYPE_BADGE,
 } from '@/lib/types'
+import { ENRICHED } from '@/lib/enriched-data'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Toast
@@ -322,11 +323,25 @@ function ActivityCard({
   onSuggest: (item: ItineraryItem) => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [imgFailed, setImgFailed] = useState(false)
   const colorClass = TYPE_COLORS[item.type]
   const badgeClass = TYPE_BADGE[item.type]
+  const extra = ENRICHED[item.title]
 
   return (
     <div className={`card-hover bg-white border-l-4 rounded-2xl shadow-sm overflow-hidden ${colorClass}`}>
+      {/* Expanded image banner */}
+      {expanded && extra?.image && !imgFailed && (
+        <div className="w-full h-44 overflow-hidden bg-gray-100">
+          <img
+            src={extra.image}
+            alt={item.title}
+            className="w-full h-full object-cover"
+            onError={() => setImgFailed(true)}
+          />
+        </div>
+      )}
+
       <div className="p-4">
         <div className="flex items-start gap-3">
           <span className="text-2xl mt-0.5 flex-shrink-0">{item.emoji}</span>
@@ -338,13 +353,19 @@ function ActivityCard({
               </span>
             </div>
             {item.location && (
-              <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <a
+                href={extra?.maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-gray-500 flex items-center gap-1 mb-2 hover:text-sky-600 transition-colors w-fit"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 {item.location}
-              </p>
+              </a>
             )}
             {item.description && (
               <div>
@@ -356,9 +377,50 @@ function ActivityCard({
                     onClick={() => setExpanded(!expanded)}
                     className="text-xs text-sky-600 font-medium mt-1 hover:text-sky-700"
                   >
-                    {expanded ? 'Show less' : 'Read more'}
+                    {expanded ? 'Show less ↑' : 'Read more ↓'}
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Expanded extras — cost + links */}
+            {expanded && extra && (
+              <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                {/* Cost */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">💰</span>
+                  <span className="text-xs font-semibold text-gray-700">{extra.cost}</span>
+                </div>
+                {/* Action links */}
+                <div className="flex flex-wrap gap-2">
+                  {extra.maps_url && (
+                    <a
+                      href={extra.maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Open in Maps
+                    </a>
+                  )}
+                  {extra.info_url && (
+                    <a
+                      href={extra.info_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      {extra.info_label || 'More Info'}
+                    </a>
+                  )}
+                </div>
               </div>
             )}
           </div>
